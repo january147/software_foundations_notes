@@ -1041,19 +1041,16 @@ Qed.
     Prove that the [rev] function is injective. There is a hard way
     and an easy way to do this. *)
 
-Lemma rev_nil : forall s : natlist, rev s = nil -> s = nil.
-Proof.
-  intros s. destruct s.
-  -simpl. reflexivity.
-  -simpl.
 
 Theorem rev_injective : forall (l1 l2 : natlist),
     rev l1 = rev l2 -> l1 = l2.
 Proof.
-  intros l1 l2. induction l1 as [| h1 t1 Hl1].
-  -simpl. induction l2 as [| h2 t2 Hl2].
-  --simpl. reflexivity.
-  --
+  intros l1 l2 H.
+  rewrite <- rev_involutive.
+  rewrite <- H.
+  rewrite -> rev_involutive.
+  reflexivity.
+Qed.
 
 
    
@@ -1145,17 +1142,20 @@ Definition option_elim (d : nat) (o : natoption) : nat :=
     Using the same idea, fix the [hd] function from earlier so we don't
     have to pass a default element for the [nil] case.  *)
 
-Definition hd_error (l : natlist) : natoption
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition hd_error (l : natlist) : natoption :=
+  match l with
+  | nil => None
+  | h :: t => Some h
+  end.
 
 Example test_hd_error1 : hd_error [] = None.
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_hd_error2 : hd_error [1] = Some 1.
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_hd_error3 : hd_error [5;6] = Some 5.
- (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** [] *)
 
@@ -1166,8 +1166,10 @@ Example test_hd_error3 : hd_error [5;6] = Some 5.
 Theorem option_elim_hd : forall (l:natlist) (default:nat),
   hd default l = option_elim default (hd_error l).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros l default. destruct l as [|h t].
+  -simpl. reflexivity.
+  -simpl. reflexivity.
+Qed.
 
 End NatList.
 
@@ -1196,10 +1198,14 @@ Definition eqb_id (x1 x2 : id) :=
   | Id n1, Id n2 => n1 =? n2
   end.
 
+
+
 (** **** Exercise: 1 star, standard (eqb_id_refl)  *)
 Theorem eqb_id_refl : forall x, true = eqb_id x x.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros x. destruct x.
+  -simpl. rewrite <- eqb_refl. reflexivity.
+Qed. 
 (** [] *)
 
 (** Now we define the type of partial maps: *)
@@ -1245,16 +1251,18 @@ Theorem update_eq :
   forall (d : partial_map) (x : id) (v: nat),
     find x (update d x v) = Some v.
 Proof.
- (* FILL IN HERE *) Admitted.
-(** [] *)
+intros d x v.  simpl. destruct x.
+-simpl. rewrite <- eqb_refl. reflexivity.
+Qed.
 
 (** **** Exercise: 1 star, standard (update_neq)  *)
 Theorem update_neq :
   forall (d : partial_map) (x y : id) (o: nat),
     eqb_id x y = false -> find x (update d y o) = find x d.
 Proof.
- (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros d x y o. intros H.
+  simpl. rewrite -> H. reflexivity.
+Qed.
 End PartialMap.
 
 (** **** Exercise: 2 stars, standard, optional (baz_num_elts) 
@@ -1268,7 +1276,8 @@ Inductive baz : Type :=
 (** How _many_ elements does the type [baz] have? (Explain in words,
     in a comment.) *)
 
-(* FILL IN HERE *)
+(* 0个，因为构造baz的两个constructor都需要baz作为参数，即我们在创造任何一个baz类型的元素之前必须使用一个已有的baz元素，
+   这就产生了矛盾，因此我们无法构建出任意一个baz元素，因此baz类型的元素个数为0 *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_baz_num_elts : option (nat*string) := None.
