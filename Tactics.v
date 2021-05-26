@@ -1191,15 +1191,21 @@ Qed.
     and [l2] for [split (combine l1 l2) = (l1,l2)] to be true?) *)
 
 Definition split_combine_statement : Prop := forall (X Y : Type) (l1 : list X) 
-  (l2 : list Y), split (combine l1 l2) = (l1, l2).
+  (l2 : list Y), length l1 = length l2 -> split (combine l1 l2) = (l1, l2).
 
 Theorem split_combine : split_combine_statement.
 Proof.
   intros X Y l1.
-  induction l1 as [|h1 t1 Hl1].
-  -destruct l2.
+  induction l1 as [|h_l1 t_l1 Hl1].
+  -destruct l2 as [|h_l2 t_l2].
   --simpl. reflexivity.
-  --
+  --discriminate.
+  -destruct l2 as [|h_l2 t_l2].
+  --discriminate. 
+  --simpl. intro H. injection H as H. apply Hl1 in H. rewrite -> H. reflexivity.
+Qed.
+
+
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_split_combine : option (nat*string) := None.
@@ -1215,7 +1221,16 @@ Theorem filter_exercise : forall (X : Type) (test : X -> bool)
      filter test l = x :: lf ->
      test x = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X test x l.
+  induction l as [|h t Hl].
+  -discriminate.
+  (* 针对l的第一个元素h对test h进行分类讨论 *)
+  -simpl. destruct (test h) eqn:E.
+  --intros lf H. injection H as H1 H2.
+  rewrite <- H1. apply E.
+  --apply Hl.
+Qed.
+  
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced, especially useful (forall_exists_challenge) 
@@ -1250,42 +1265,57 @@ Proof.
     [existsb'] and [existsb] have the same behavior.
 *)
 
-Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
+  match l with
+  | nil => true
+  | h :: t => if test h then forallb test t
+              else false
+  end.
 
 Example test_forallb_1 : forallb oddb [1;3;5;7;9] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
 Example test_forallb_2 : forallb negb [false;false] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
 Example test_forallb_3 : forallb evenb [0;2;4;5] = false.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
 Example test_forallb_4 : forallb (eqb 5) [] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
-Fixpoint existsb {X : Type} (test : X -> bool) (l : list X) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint existsb {X : Type} (test : X -> bool) (l : list X) : bool :=
+  match l with
+  |nil => false
+  |h :: t => if test h then true
+             else existsb test t
+  end.
 
 Example test_existsb_1 : existsb (eqb 5) [0;2;3;6] = false.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
 Example test_existsb_2 : existsb (andb true) [true;true;false] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
 Example test_existsb_3 : existsb oddb [1;0;0;0;0;3] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
 Example test_existsb_4 : existsb evenb [] = false.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. simpl. reflexivity. Qed.
 
-Definition existsb' {X : Type} (test : X -> bool) (l : list X) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition existsb' {X : Type} (test : X -> bool) (l : list X) : bool :=
+  fold (fun x y => orb (test x) y) l false.
 
 Theorem existsb_existsb' : forall (X : Type) (test : X -> bool) (l : list X),
   existsb test l = existsb' test l.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. 
+  intros X test l.
+  induction l as [|h t Hl].
+  -simpl. reflexivity.
+  -simpl. destruct (test h) eqn:E.
+  --unfold existsb'. unfold fold. rewrite -> E. simpl. reflexivity.
+  --unfold existsb'. simpl. rewrite -> E. simpl. rewrite -> Hl. unfold existsb'. reflexivity.
+Qed.
 
 (** [] *)
 
