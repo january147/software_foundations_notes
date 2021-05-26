@@ -966,7 +966,7 @@ Proof.
   intros l1 l2 H. injection H as H3 H4. rewrite <- H3. rewrite <- H4. simpl.
   f_equal. apply Hl. reflexivity.
 Qed.
- 
+
   
 
 (** The [eqn:] part of the [destruct] tactic is optional: So far,
@@ -1041,7 +1041,18 @@ Theorem bool_fn_applied_thrice :
   forall (f : bool -> bool) (b : bool),
   f (f (f b)) = f b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros f b. destruct b. 
+  -destruct (f true) eqn:E1.
+  --rewrite -> E1. apply E1.
+  --destruct (f false) eqn:E2.
+  ---apply E1.
+  ---apply E2.
+  -destruct (f false) eqn:E2.
+  --destruct (f true) eqn:E1.
+  ---apply E1.
+  ---apply E2.
+  --rewrite -> E2. apply E2.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -1122,8 +1133,14 @@ Proof.
 Theorem eqb_sym : forall (n m : nat),
   (n =? m) = (m =? n).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n. induction n as [|n' Hn].
+  -destruct m.
+  --simpl. reflexivity.
+  --simpl. reflexivity.
+  -destruct m.
+  --simpl. reflexivity.
+  --simpl. apply Hn.
+Qed.
 
 (** **** Exercise: 3 stars, advanced, optional (eqb_sym_informal) 
 
@@ -1143,8 +1160,21 @@ Theorem eqb_trans : forall n m p,
   m =? p = true ->
   n =? p = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  (* 为了归纳假设的一般性，对n进行归纳之前不引入m和p *)
+  intros n.
+  induction n as [|n' Hn].
+  -destruct m.
+  --destruct p.
+  ---reflexivity.
+  ---discriminate.
+  --discriminate.
+  -destruct m.
+  --discriminate.
+  --destruct p.
+  ---discriminate.
+  ---simpl. apply Hn.
+Qed.
+  
 
 (** **** Exercise: 3 stars, advanced (split_combine) 
 
@@ -1160,14 +1190,16 @@ Proof.
     things than necessary.  Hint: what property do you need of [l1]
     and [l2] for [split (combine l1 l2) = (l1,l2)] to be true?) *)
 
-Definition split_combine_statement : Prop
-  (* ("[: Prop]" means that we are giving a name to a
-     logical proposition here.) *)
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition split_combine_statement : Prop := forall (X Y : Type) (l1 : list X) 
+  (l2 : list Y), split (combine l1 l2) = (l1, l2).
 
 Theorem split_combine : split_combine_statement.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros X Y l1.
+  induction l1 as [|h1 t1 Hl1].
+  -destruct l2.
+  --simpl. reflexivity.
+  --
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_split_combine : option (nat*string) := None.
