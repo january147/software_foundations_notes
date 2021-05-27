@@ -750,9 +750,11 @@ Theorem exists_example_2 : forall n,
   (exists o, n = 2 + o).
 Proof.
   (* WORKED IN CLASS *)
-  intros n [m Hm]. (* note implicit [destruct] here *)
+  intros n H.
+  (* destruct消去原命题的存在量词，并引入原命题的存在量词修饰的变量，将其命名为m *) 
+  destruct H as [m H].
   exists (2 + m).
-  apply Hm.  Qed.
+  apply H.  Qed.
 
 (** **** Exercise: 1 star, standard, especially useful (dist_not_exists) 
 
@@ -770,8 +772,7 @@ Proof.
   destruct H0.
   apply H.
 Qed.
-  
-  
+
 
 (** **** Exercise: 2 stars, standard (dist_exists_or) 
 
@@ -818,6 +819,7 @@ Fixpoint In {A : Type} (x : A) (l : list A) : Prop :=
   | x' :: l' => x' = x \/ In x l'
   end.
 
+  
 (** When [In] is applied to a concrete list, it expands into a
     concrete sequence of nested disjunctions. *)
 
@@ -930,15 +932,31 @@ Qed.
     lemma below.  (Of course, your definition should _not_ just
     restate the left-hand side of [All_In].) *)
 
-Fixpoint All {T : Type} (P : T -> Prop) (l : list T) : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint All {T : Type} (P : T -> Prop) (l : list T) : Prop :=
+  match l with
+  |nil => True
+  |h :: t => P h /\ All P t
+  end.
 
 Theorem All_In :
   forall T (P : T -> Prop) (l : list T),
     (forall x, In x l -> P x) <->
     All P l.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros T P l.
+  induction l as [|h t Hl].
+  -simpl. split.
+  --intros H.  reflexivity.
+  --intros H x H2. exfalso. apply H2.
+  -simpl. split.
+  --intros H. split.
+  ---apply H. left. reflexivity.
+  ---apply Hl. intros x H1. apply H. right. apply H1.
+  --intros H x H1. destruct H1 as [H2 | H3].
+  ---destruct H as [H3 H4]. rewrite <- H2. apply H3.
+  ---destruct H as [H5 H6]. rewrite <- Hl in H6. apply H6. apply H3.
+Qed. 
+  
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (combine_odd_even) 
@@ -949,10 +967,9 @@ Proof.
     equivalent to [Podd n] when [n] is odd and equivalent to [Peven n]
     otherwise. *)
 
-Definition combine_odd_even (Podd Peven : nat -> Prop) : nat -> Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-
-(** To test your definition, prove the following facts: *)
+(* 注意combine_odd_even返回了一个函数而不是返回一个普通的值 *)
+Definition combine_odd_even (Podd Peven : nat -> Prop) : nat -> Prop := fun n => if oddb n then Podd n 
+  else Peven n.
 
 Theorem combine_odd_even_intro :
   forall (Podd Peven : nat -> Prop) (n : nat),
@@ -960,7 +977,14 @@ Theorem combine_odd_even_intro :
     (oddb n = false -> Peven n) ->
     combine_odd_even Podd Peven n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros Podd Peven n.
+  intros H1 H2.
+  unfold combine_odd_even.
+  destruct (oddb n).
+  -apply H1. reflexivity.
+  -apply H2. reflexivity.
+Qed.
+
 
 Theorem combine_odd_even_elim_odd :
   forall (Podd Peven : nat -> Prop) (n : nat),
