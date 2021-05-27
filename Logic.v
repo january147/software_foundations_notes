@@ -1654,14 +1654,22 @@ Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
 Theorem forallb_true_iff : forall X test (l : list X),
    forallb test l = true <-> All (fun x => test x = true) l.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X test l.
+  induction l as [|h t Hl].
+  -simpl. split. reflexivity. reflexivity.
+  -simpl. split.
+  --intros H. destruct (test h) eqn:E.
+  ---split. reflexivity. simpl in H. apply Hl in H. apply H.
+  ---simpl in H. discriminate.
+  --intros H. destruct H as [H2 H3]. apply Hl in H3. rewrite -> H2. simpl. apply H3.
+Qed.
 
 (** (Ungraded thought question) Are there any important properties of
     the function [forallb] which are not captured by this
     specification? *)
 
 (* FILL IN HERE
-
+    没想到
     [] *)
 
 (* ================================================================= *)
@@ -1800,8 +1808,9 @@ Theorem excluded_middle_irrefutable: forall (P:Prop),
   ~ ~ (P \/ ~ P).
 Proof.
   unfold not. intros P H.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  apply H. right. intros H1. apply H. left. apply H1.
+Qed.
+ (** [] *)
 
 (** **** Exercise: 3 stars, advanced (not_exists_dist) 
 
@@ -1821,7 +1830,16 @@ Theorem not_exists_dist :
   forall (X:Type) (P : X -> Prop),
     ~ (exists x, ~ P x) -> (forall x, P x).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold excluded_middle.
+  intros H1 X P.
+  unfold not.
+  intros H.
+  intros x.
+  destruct (H1 (P x)) as [H2 | H3].
+  -apply H2.
+  -unfold not in H3. exfalso. apply H. exists x. apply H3.
+Qed.
+  
 (** [] *)
 
 (** **** Exercise: 5 stars, standard, optional (classical_axioms) 
