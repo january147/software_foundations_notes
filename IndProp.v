@@ -156,8 +156,10 @@ Qed.
 Theorem ev_double : forall n,
   ev (double n).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n. induction n as [|n' Hn].
+  -simpl. apply ev_0.
+  -simpl. apply ev_SS. apply Hn.
+Qed.
 
 (* ################################################################# *)
 (** * Using Evidence in Proofs *)
@@ -277,6 +279,8 @@ Proof.
    rewrite Heq. apply Hev.
 Qed.
 
+
+
 (** Note how both proofs produce two subgoals, which correspond
     to the two ways of proving [ev].  The first subgoal is a
     contradiction that is discharged with [discriminate].  The second
@@ -323,8 +327,9 @@ Theorem one_not_even' : ~ ev 1.
 Theorem SSSSev__even : forall n,
   ev (S (S (S (S n)))) -> ev n.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n H. inversion H. inversion H1. apply H3.
+Qed.
+  
 
 (** **** Exercise: 1 star, standard (ev5_nonsense) 
 
@@ -333,8 +338,8 @@ Proof.
 Theorem ev5_nonsense :
   ev 5 -> 2 + 2 = 9.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros H. inversion H. inversion H1. inversion H3.
+Qed.
 
 (** The [inversion] tactic does quite a bit of work. For
     example, when applied to an equality assumption, it does the work
@@ -492,8 +497,11 @@ Qed.
 (** **** Exercise: 2 stars, standard (ev_sum)  *)
 Theorem ev_sum : forall n m, ev n -> ev m -> ev (n + m).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n m H1 H2.
+  induction H1 as [|n' E' IH].
+  -simpl. apply H2.
+  -simpl. apply ev_SS. apply IH.
+Qed.
 
 (** **** Exercise: 4 stars, advanced, optional (ev'_ev) 
 
@@ -511,10 +519,27 @@ Inductive ev' : nat -> Prop :=
     applying theorems to arguments, and note that the same technique
     works with constructors of inductively defined propositions. *)
 
+Lemma ev_add_distr: forall (n m : nat), ev n -> ev m -> ev (n + m).
+Proof.
+  intros n m H1 H2.
+  induction H1.
+  -simpl. apply H2.
+  -simpl. apply ev_SS. apply IHev.
+Qed.
+  
+
 Theorem ev'_ev : forall n, ev' n <-> ev n.
 Proof.
- (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n.
+  split.
+  -intros Ha. induction Ha.
+  --apply ev_0.
+  --apply ev_SS. apply ev_0.
+  --apply ev_add_distr. apply IHHa1. apply IHHa2.
+  -intros Hb. induction Hb.
+  --apply ev'_0.
+  --apply (ev'_sum 2 n (ev'_2) IHHb).
+Qed.
 
 (** **** Exercise: 3 stars, advanced, especially useful (ev_ev__ev) 
 
@@ -523,9 +548,6 @@ Proof.
 
 Theorem ev_ev__ev : forall n m,
   ev (n+m) -> ev n -> ev m.
-Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (ev_plus_plus) 
 
