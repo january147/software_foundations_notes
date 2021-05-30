@@ -548,7 +548,14 @@ Qed.
 
 Theorem ev_ev__ev : forall n m,
   ev (n+m) -> ev n -> ev m.
-
+Proof.
+  intros n m H1 H2.
+  generalize dependent m.
+  induction H2.
+  -intros m. simpl. intros H1. apply H1.
+  -intros m H1. simpl in H1. rewrite -> plus_n_Sm in H1. rewrite -> plus_n_Sm in H1.
+  apply IHev in H1. apply evSS_ev in H1. apply H1.
+Qed.
 (** **** Exercise: 3 stars, standard, optional (ev_plus_plus) 
 
     This exercise can be completed without induction or case analysis.
@@ -558,8 +565,17 @@ Theorem ev_ev__ev : forall n m,
 Theorem ev_plus_plus : forall n m p,
   ev (n+m) -> ev (n+p) -> ev (m+p).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n m p H1 H2.
+  apply (ev_add_distr (n + m) (n + p) H1 ) in H2.
+  replace ( n + m + (n + p)) with ( double(n) + m + p) in H2.
+  -apply (ev_ev__ev (double n) (m + p)).
+  --rewrite -> plus_assoc. apply H2.
+  --apply ev_double.
+  -rewrite -> (plus_assoc (n + m) n p). rewrite <- (plus_assoc n m n).
+  rewrite -> (plus_comm m n). rewrite -> (plus_assoc n n m). f_equal. f_equal.
+  apply double_plus.
+Qed.
+  
 
 (* ################################################################# *)
 (** * Inductive Relations *)
@@ -604,19 +620,19 @@ Notation "n <= m" := (le n m).
     [reflexivity] don't do the job, because the proofs aren't just a
     matter of simplifying computations.) *)
 
-Theorem test_le1 :
+Example test_le1 :
   3 <= 3.
 Proof.
   (* WORKED IN CLASS *)
   apply le_n.  Qed.
 
-Theorem test_le2 :
+Example test_le2 :
   3 <= 6.
 Proof.
   (* WORKED IN CLASS *)
   apply le_S. apply le_S. apply le_S. apply le_n.  Qed.
 
-Theorem test_le3 :
+Example test_le3 :
   (2 <= 1) -> 2 + 2 = 5.
 Proof.
   (* WORKED IN CLASS *)
@@ -648,18 +664,16 @@ Inductive next_ev : nat -> nat -> Prop :=
     Define an inductive binary relation [total_relation] that holds
     between every pair of natural numbers. *)
 
-(* FILL IN HERE
-
-    [] *)
+Inductive total_relation: nat -> nat -> Prop :=
+| always_hold (n m : nat) : total_relation n m. 
 
 (** **** Exercise: 2 stars, standard, optional (empty_relation) 
 
     Define an inductive binary relation [empty_relation] (on numbers)
     that never holds. *)
 
-(* FILL IN HERE
-
-    [] *)
+Inductive empty_relation: nat -> nat -> Prop :=
+| never_hold (n m : nat) (H : False-> True): empty_relation n m. 
 
 (** From the definition of [le], we can sketch the behaviors of
     [destruct], [inversion], and [induction] on a hypothesis [H]
@@ -681,40 +695,77 @@ Inductive next_ev : nat -> nat -> Prop :=
 
 Lemma le_trans : forall m n o, m <= n -> n <= o -> m <= o.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros m n o H1 H2.
+  generalize dependent m.
+  induction H2.
+  -intros m H1. apply H1.
+  -intros m0 H1. apply IHle in H1. apply le_S. apply H1.
+Qed.
 
 Theorem O_le_n : forall n,
   0 <= n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n.
+  induction n.
+  -apply le_n.
+  -apply le_S. apply IHn.
+Qed.
 
 Theorem n_le_m__Sn_le_Sm : forall n m,
   n <= m -> S n <= S m.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n m H.
+  induction H.
+  -apply le_n.
+  -apply le_S. apply IHle.
+Qed.
 
 Theorem Sn_le_Sm__n_le_m : forall n m,
   S n <= S m -> n <= m.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n m H.
+  inversion H.
+  -apply le_n.
+  -apply le_trans with (n := S n).
+  --apply le_S. apply le_n.
+  --apply H1.
+Qed.
+  
 
 Theorem le_plus_l : forall a b,
   a <= a + b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intro a.
+  induction a.
+  -simpl. apply O_le_n.
+  -simpl. intros b. apply n_le_m__Sn_le_Sm. apply IHa.
+Qed.
 
 Theorem plus_le : forall n1 n2 m,
   n1 + n2 <= m ->
   n1 <= m /\ n2 <= m.
 Proof.
- (* FILL IN HERE *) Admitted.
+  intros n1 n2 m.
+  split.
+  -apply le_trans with (n := n1 + n2).
+  --apply le_plus_l.
+  --apply H.
+  -apply le_trans with (n := n1 + n2).
+  --rewrite <- plus_comm. apply le_plus_l.
+  --apply H.
+Qed.
+  
 
 (** Hint: the next one may be easiest to prove by induction on [n]. *)
 
 Theorem add_le_cases : forall n m p q,
     n + m <= p + q -> n <= p \/ m <= q.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros n.
+  induction n.
+  -simpl. intros m p q H. left. apply O_le_n.
+  -intros m p q H. simpl in H. rewrite -> plus_n_Sm in H. apply IHn in H.
+  
 
 Theorem lt_S : forall n m,
   n < m ->
