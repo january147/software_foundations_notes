@@ -764,25 +764,48 @@ Proof.
   intros n.
   induction n.
   -simpl. intros m p q H. left. apply O_le_n.
-  -intros m p q H. simpl in H. rewrite -> plus_n_Sm in H. apply IHn in H.
-  
+  -intros m p q H. destruct p.
+  --right. simpl in H. apply plus_le with (n1 := S n). simpl. apply H.
+  --simpl in H. apply Sn_le_Sm__n_le_m in H. apply IHn in H. destruct H as [H1 | H2].
+  ---left. apply n_le_m__Sn_le_Sm. apply H1.
+  ---right. apply H2.
+Qed.
+
 
 Theorem lt_S : forall n m,
   n < m ->
   n < S m.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n m.
+  unfold lt.
+  intros H.
+  apply le_S.
+  apply H.
+Qed.
 
 Theorem plus_lt : forall n1 n2 m,
   n1 + n2 < m ->
   n1 < m /\ n2 < m.
 Proof.
-(* FILL IN HERE *) Admitted.
+  unfold lt.
+  intros n1 n2 m H.
+  split.
+  -replace (S (n1 + n2)) with (S n1 + n2) in H.
+  --apply plus_le in H. destruct H as [H1 H2]. apply H1.
+  --simpl. reflexivity.
+  -rewrite -> plus_n_Sm in H. apply plus_le in H. destruct H as [H1 H2]. apply H2.
+Qed.
 
 Theorem leb_complete : forall n m,
   n <=? m = true -> n <= m.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n.
+  induction n.
+  -intros m H. apply O_le_n.
+  -intros m H. destruct m.
+  --discriminate.
+  --simpl in H. apply n_le_m__Sn_le_Sm. apply IHn. apply H.
+Qed.
 
 (** Hint: The next one may be easiest to prove by induction on [m]. *)
 
@@ -790,23 +813,30 @@ Theorem leb_correct : forall n m,
   n <= m ->
   n <=? m = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n.
+  induction n.
+  -intros m H. simpl. reflexivity.
+  -intros m H. destruct H eqn:E.
+  --rewrite <- leb_refl. reflexivity.
+  --simpl. apply IHn. apply  Sn_le_Sm__n_le_m in H as H2. apply H2.
+Qed.
+
 
 (** Hint: The next one can easily be proved without using [induction]. *)
 
 Theorem leb_true_trans : forall n m o,
   n <=? m = true -> m <=? o = true -> n <=? o = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros n m o H1 H2.
+  apply leb_complete in H1. apply leb_complete in H2.
+  apply leb_correct. apply le_trans with (n := m). apply H1. apply H2.
+Qed.
+  
 (** **** Exercise: 2 stars, standard, optional (leb_iff)  *)
 Theorem leb_iff : forall n m,
   n <=? m = true <-> n <= m.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  split. apply leb_complete. apply leb_correct. Qed.
 Module R.
 
 (** **** Exercise: 3 stars, standard, especially useful (R_provability) 
@@ -829,12 +859,14 @@ Inductive R : nat -> nat -> nat -> Prop :=
     - If we dropped constructor [c5] from the definition of [R],
       would the set of provable propositions change?  Briefly (1
       sentence) explain your answer.
+      不会，因为根据c1，c2和c3可以推导出C5
 
     - If we dropped constructor [c4] from the definition of [R],
       would the set of provable propositions change?  Briefly (1
       sentence) explain your answer. *)
+      
 
-(* FILL IN HERE *)
+(* 不会，因为c2和c3可以推导出c4 *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_R_provability : option (nat*string) := None.
@@ -846,13 +878,28 @@ Definition manual_grade_for_R_provability : option (nat*string) := None.
     Figure out which function; then state and prove this equivalence
     in Coq? *)
 
-Definition fR : nat -> nat -> nat
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition fR : nat -> nat -> nat := fun (a b : nat) => a + b.
 
 Theorem R_equiv_fR : forall m n o, R m n o <-> fR m n = o.
 Proof.
-(* FILL IN HERE *) Admitted.
-(** [] *)
+  intros m. split. 
+  -intros H. induction H.
+  --simpl. reflexivity.
+  --simpl. f_equal. apply IHR.
+  --unfold fR. rewrite <- plus_n_Sm. f_equal. unfold fR in IHR. apply IHR.
+  --unfold fR in IHR. simpl in IHR. injection IHR as IHR. rewrite <- plus_n_Sm in IHR. 
+  injection IHR as IHR. unfold fR. apply IHR.
+  --unfold fR. rewrite <- plus_comm. unfold fR in IHR. apply IHR.
+  -generalize dependent n. generalize dependent o. induction m.
+  --simpl. intros o n. generalize dependent o. induction n.
+  ---intros o H. rewrite <- H. apply c1.
+  ---intros o H. destruct o.
+  ----discriminate.
+  ----apply c3. injection H as H. apply IHn. apply H.
+  --destruct o.
+  ---intros n H. simpl in H. discriminate.
+  ---intros n H. apply c2. simpl in H. injection H as H. apply IHm. apply H.
+Qed.
 
 End R.
 
@@ -894,26 +941,44 @@ End R.
       Hint: choose your induction carefully! *)
 
 Inductive subseq : list nat -> list nat -> Prop :=
-(* FILL IN HERE *)
-.
+|nil_true (b : list nat) : subseq nil b
+|add_both (n : nat) (a b : list nat) (H : subseq a b) : subseq (n :: a) (n :: b)
+|add_single (n : nat) (a b : list nat) (H : subseq a b) : subseq a (n :: b).
 
 Theorem subseq_refl : forall (l : list nat), subseq l l.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros l.
+  induction l as [|h t Hl].
+  -apply nil_true.
+  -apply add_both. apply Hl.
+Qed.
 
 Theorem subseq_app : forall (l1 l2 l3 : list nat),
   subseq l1 l2 ->
   subseq l1 (l2 ++ l3).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros l1 l2 l3 H.
+  induction H.
+  -simpl. apply nil_true.
+  -simpl. apply add_both. apply IHsubseq.
+  -simpl. apply add_single. apply IHsubseq.
+Qed.
 
 Theorem subseq_trans : forall (l1 l2 l3 : list nat),
   subseq l1 l2 ->
   subseq l2 l3 ->
   subseq l1 l3.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros l1 l2 l3 H1 H2.
+  generalize dependent l1.
+  induction H2.
+  -intros l1 H1. inversion H1. apply nil_true.
+  -intros l1 H1. inversion H1.
+  --apply nil_true.
+  --apply add_both. apply IHsubseq. apply H3.
+  --apply add_single. apply IHsubseq. apply H3.
+  -intros l1 H1. apply add_single. apply IHsubseq. apply H1.
+Qed.
 
 (** **** Exercise: 2 stars, standard, optional (R_provability2) 
 
@@ -1156,13 +1221,18 @@ Qed.
 Lemma empty_is_empty : forall T (s : list T),
   ~ (s =~ EmptySet).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros T s H. inversion H.
+Qed.
 
 Lemma MUnion' : forall T (s : list T) (re1 re2 : reg_exp T),
   s =~ re1 \/ s =~ re2 ->
   s =~ Union re1 re2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros T s re1 re2 H.
+  destruct H as [H1 | H2].
+  -apply MUnionL. apply H1.
+  -apply MUnionR. apply H2.
+Qed.
 
 (** The next lemma is stated in terms of the [fold] function from the
     [Poly] chapter: If [ss : list (list T)] represents a sequence of
@@ -1173,9 +1243,15 @@ Lemma MStar' : forall T (ss : list (list T)) (re : reg_exp T),
   (forall s, In s ss -> s =~ re) ->
   fold app ss [] =~ Star re.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros T ss re H.
+  induction ss.
+  -simpl. apply MStar0.
+  -simpl. apply MStarApp.
+  --apply H. left. reflexivity.
+  --apply IHss. intros s H1. apply H. right. apply H1.
+Qed.
+  
+  
 (** **** Exercise: 4 stars, standard, optional (reg_exp_of_list_spec) 
 
     Prove that [reg_exp_of_list] satisfies the following
@@ -1184,9 +1260,20 @@ Proof.
 Lemma reg_exp_of_list_spec : forall T (s1 s2 : list T),
   s1 =~ reg_exp_of_list s2 <-> s1 = s2.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros T s1 s2.
+  split.
+  -generalize dependent s1. induction s2.
+  --simpl. intros s1 H. inversion H.  reflexivity.
+  --simpl. intros s1 H. inversion H.
+  ---inversion H3. simpl. f_equal. apply IHs2. apply H4.
+  -generalize dependent s1. induction s2.
+  --intros s1 H. simpl. rewrite -> H. apply MEmpty.
+  --intros s1 H. simpl. destruct s1.
+  ---discriminate.
+  ---injection H as H1 H2. rewrite -> H1. replace (x :: s1) with ([x] ++ s1).
+  ----apply MApp. apply MChar. apply IHs2. apply H2.
+  ----simpl. reflexivity.
+Qed.
 (** Since the definition of [exp_match] has a recursive
     structure, we might expect that proofs involving regular
     expressions will often require induction on evidence. *)
@@ -1273,14 +1360,45 @@ Qed.
     regular expression matches some string. Prove that your function
     is correct. *)
 
-Fixpoint re_not_empty {T : Type} (re : reg_exp T) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint re_not_empty {T : Type} (re : reg_exp T) : bool :=
+  match re with
+  |EmptySet => false
+  |EmptyStr => true
+  |Char t => true
+  |App r1 r2 => re_not_empty r1 && re_not_empty r2
+  |Union r1 r2 => re_not_empty r1 || re_not_empty r2
+  (* 由于[] =~ Start re始终成立，因此Star构造的re必定可以匹配[] *)
+  |Star r => true
+  end.
 
 Lemma re_not_empty_correct : forall T (re : reg_exp T),
   (exists s, s =~ re) <-> re_not_empty re = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros T re.
+  split.
+  -intros H. induction re.
+  --destruct H. inversion H.
+  --simpl. reflexivity.
+  --simpl. reflexivity.
+  --simpl. destruct H. inversion H. rewrite -> andb_true_iff. split.
+  ---apply IHre1. exists s1. apply H3.
+  ---apply IHre2. exists s2. apply H4.
+  --simpl. rewrite -> orb_true_iff. destruct H. inversion H.
+  ---left. apply IHre1. exists x. apply H2.
+  ---right. apply IHre2. exists x. apply H1.
+  --simpl. reflexivity.
+  -intros H. induction re.
+  --discriminate.
+  --exists nil. apply MEmpty.
+  --exists [t]. apply MChar.
+  --simpl in H. rewrite -> andb_true_iff in H. destruct H as [H1 H2]. 
+  apply IHre1 in H1. apply IHre2 in H2. destruct H1. destruct H2. 
+  exists (x ++ x0). apply MApp. apply H. apply H0.
+  --simpl in H. rewrite -> orb_true_iff in H. destruct H as [H1 | H2].
+  ---apply IHre1 in H1. destruct H1. exists x. apply MUnionL. apply H.
+  ---apply IHre2 in H2. destruct H2. exists x. apply MUnionR. apply H.
+  --exists nil. apply MStar0.
+Qed.
 
 (* ================================================================= *)
 (** ** The [remember] Tactic *)
@@ -1419,8 +1537,25 @@ Lemma MStar'' : forall T (s : list T) (re : reg_exp T),
     s = fold app ss []
     /\ forall s', In s' ss -> s' =~ re.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros T s re H.
+  remember (Star re) as re'.
+  induction H.
+  -discriminate.
+  -discriminate.
+  -discriminate.
+  -discriminate.
+  -discriminate.
+  -exists nil. simpl. split. reflexivity. intros s' H. destruct H.
+  -injection Heqre' as Ere. rewrite -> Ere in H. rewrite -> Ere in IHexp_match2. 
+  destruct IHexp_match2. reflexivity. destruct H1 as [H2 H3].
+  exists (s1 :: x). split.
+  --simpl. f_equal. apply H2.
+  --simpl. intros s'.  intros H4. destruct H4 as [H5 | H6].
+  ---rewrite <- H5. apply H.
+  ---apply H3 in H6. apply H6.
+Qed.
+ 
+  
 
 (** **** Exercise: 5 stars, advanced (weak_pumping) 
 
@@ -1525,6 +1660,40 @@ Proof.
     + apply IHm.
 Qed.
 
+
+(* 新增的一个引理，下面weak pumping的证明使用了这个引理，而没有使用原书中的nil_star *)
+Lemma napp_star2 :
+  forall T m s1 s2 (re : reg_exp T),
+    s1 =~ re -> s2 =~ Star re ->
+    napp m (s1 ++ s2) =~ Star re.
+Proof.
+  intros T m s1 s2 re Hs1 Hs2.
+  induction m.
+  - simpl. apply MStar0.
+  - simpl. rewrite <- app_assoc.
+    apply MStarApp.
+    + apply Hs1.
+    + apply star_app. apply Hs2. apply IHm.
+Qed.
+
+(* 新增的一个引理，没有使用 *)
+Lemma nil_match_Star_empty: forall (T : Type) (re : reg_exp T) (s : list T),
+  s =~ Star EmptyStr -> s = [].
+Proof.
+  intros T re s H.
+  remember (Star EmptyStr) as sem.
+  induction H.
+  -discriminate.
+  -discriminate.
+  -discriminate.
+  -discriminate.
+  -discriminate.
+  -reflexivity.
+  -injection Heqsem as Heq. rewrite -> Heq in IHexp_match2.  rewrite -> Heq in H. 
+  inversion H. simpl. apply IHexp_match2. reflexivity.
+Qed.
+
+
 (** The (weak) pumping lemma itself says that, if [s =~ re] and if the
     length of [s] is at least the pumping constant of [re], then [s]
     can be split into three substrings [s1 ++ s2 ++ s3] in such a way
@@ -1541,7 +1710,6 @@ Lemma weak_pumping : forall T (re : reg_exp T) s,
     s = s1 ++ s2 ++ s3 /\
     s2 <> [] /\
     forall m, s1 ++ napp m s2 ++ s3 =~ re.
-
 (** You are to fill in the proof. Several of the lemmas about
     [le] that were in an optional exercise earlier in this chapter
     may be useful. *)
@@ -1553,7 +1721,45 @@ Proof.
        | re | s1 s2 re Hmatch1 IH1 Hmatch2 IH2 ].
   - (* MEmpty *)
     simpl. intros contra. inversion contra.
-  (* FILL IN HERE *) Admitted.
+  (* MChar *)
+  - simpl. intros contra. inversion contra. inversion H0.
+  (* MAdd *)
+  - simpl. intros H. rewrite -> app_length in H. apply add_le_cases in H.
+  destruct H as [H1 | H2].
+  --apply IH1 in H1. destruct H1. destruct H. destruct H. destruct H as [H1 [H2 H3]].
+  exists x. exists x0. exists (x1 ++ s2). split.
+  ---rewrite -> app_assoc. rewrite -> app_assoc. rewrite <- (app_assoc T x x0 x1).
+     rewrite <- H1. reflexivity.
+  ---split. apply H2. intros m. rewrite -> app_assoc. rewrite -> app_assoc. 
+     rewrite <- (app_assoc T x (napp m x0) x1). apply MApp. apply H3. apply Hmatch2.
+  (* 同理 *)
+  --apply IH2 in H2. destruct H2. destruct H. destruct H. destruct H as [H1 [H2 H3]].
+  exists (s1 ++ x). exists x0. exists x1. split.
+  ---rewrite <- app_assoc. rewrite <- H1. reflexivity.
+  ---split. apply H2. intros m. rewrite <- app_assoc. apply MApp. apply Hmatch1. apply H3.
+  (* MUninoL *)
+  -simpl. intros H. apply plus_le in H. destruct H as [H1 H2]. apply IH in H1.
+  destruct H1. destruct H. destruct H. destruct H as [H3 [H4 H5]]. 
+  exists x. exists x0. exists x1. split. apply H3. split. apply H4. intros m. 
+  apply MUnionL. apply H5.
+  (* MUninoR 同理 *)
+  -simpl. intros H. apply plus_le in H. destruct H as [H1 H2]. apply IH in H2.
+  destruct H2. destruct H. destruct H. destruct H as [H3 [H4 H5]]. 
+  exists x. exists x0. exists x1. split. apply H3. split. apply H4. intros m. 
+  apply MUnionR. apply H5.
+  (* MStar0 *)
+  -simpl. intros H. inversion H. apply pumping_constant_0_false in H1. destruct H1.
+  (* MStarApp *)
+  -simpl. intros H. exists nil. exists (s1 ++ s2). exists nil. split. 
+  --simpl. rewrite -> app_nil_r. reflexivity.
+  --split.
+  ---unfold not. intros H1. rewrite -> H1 in H. simpl in H. inversion H. 
+  apply pumping_constant_0_false in H2. destruct H2.
+  ---intros m. simpl. rewrite -> app_nil_r. apply napp_star2. apply Hmatch1.
+  apply Hmatch2.
+Qed.
+
+
 (** [] *)
 
 (** **** Exercise: 5 stars, advanced, optional (pumping) 
