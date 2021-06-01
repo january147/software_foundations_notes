@@ -1689,7 +1689,7 @@ Proof.
   -discriminate.
   -discriminate.
   -reflexivity.
-  -injection Heqsem as Heq. rewrite -> Heq in IHexp_match2.  rewrite -> Heq in H. 
+  -injection Heqsem as Heq. rewrite -> Heq in IHexp_match2. rewrite -> Heq in H. 
   inversion H. simpl. apply IHexp_match2. reflexivity.
 Qed.
 
@@ -1726,11 +1726,11 @@ Proof.
   (* MAdd *)
   - simpl. intros H. rewrite -> app_length in H. apply add_le_cases in H.
   destruct H as [H1 | H2].
-  --apply IH1 in H1. destruct H1. destruct H. destruct H. destruct H as [H1 [H2 H3]].
+  --apply IH1 in H1.  destruct H1 as (x & x0 & x1 & H). destruct H as (H1 & H2 & H3).
   exists x. exists x0. exists (x1 ++ s2). split.
   ---rewrite -> app_assoc. rewrite -> app_assoc. rewrite <- (app_assoc T x x0 x1).
      rewrite <- H1. reflexivity.
-  ---split. apply H2. intros m. rewrite -> app_assoc. rewrite -> app_assoc. 
+  ---split. apply H2. intros m. rewrite -> app_assoc. rewrite -> app_assoc.
      rewrite <- (app_assoc T x (napp m x0) x1). apply MApp. apply H3. apply Hmatch2.
   (* 同理 *)
   --apply IH2 in H2. destruct H2. destruct H. destruct H. destruct H as [H1 [H2 H3]].
@@ -1760,7 +1760,27 @@ Proof.
 Qed.
 
 
-(** [] *)
+Lemma le_plus_both: forall (a b c d : nat), a <= c -> b <= d -> a + b <= c + d.
+Proof.
+  intros a.
+  induction a.
+  -intros b c d H1 H2. simpl. apply le_trans with (n := d). apply H2. 
+  rewrite -> plus_comm. apply le_plus_l.
+  -intros b c d H1 H2. destruct c.
+  --inversion H1.
+  --simpl. apply n_le_m__Sn_le_Sm. apply Sn_le_Sm__n_le_m in H1. 
+  apply (IHa b c d H1) in H2. apply H2.
+Qed.
+
+Lemma le_false_rev: forall (a b : nat), (a <=? b = false) -> b <= a.
+Proof.
+  intros a.
+  induction a.
+  -intros b H. simpl in H. discriminate.
+  -intros b H. destruct b.
+  --simpl in H. apply O_le_n.
+  --simpl in H. apply n_le_m__Sn_le_Sm. apply IHa. apply H.
+Qed.
 
 (** **** Exercise: 5 stars, advanced, optional (pumping) 
 
@@ -1786,7 +1806,84 @@ Proof.
        | re | s1 s2 re Hmatch1 IH1 Hmatch2 IH2 ].
   - (* MEmpty *)
     simpl. intros contra. inversion contra.
-  (* FILL IN HERE *) Admitted.
+  (* MChar *)
+  - simpl. intros contra. inversion contra. inversion H0.
+  (* MAdd *)
+  - simpl. intros H. rewrite -> app_length in H. apply add_le_cases in H.
+  destruct H as [H1 | H2].
+  (* MAdd-1 pumping_constant re1 <= length s1 *)
+  --apply IH1 in H1.  destruct H1 as (x & x0 & x1 & H). destruct H as (H1 & H2 & H3).
+  exists x. exists x0. exists (x1 ++ s2). split.
+  ---rewrite -> app_assoc. rewrite -> app_assoc. rewrite <- (app_assoc T x x0 x1).
+     rewrite <- H1. reflexivity.
+  ---split. apply H2. destruct H3 as [H3 H4]. split.
+  ----apply le_trans with (o := pumping_constant re1 + pumping_constant re2) in H3. apply H3. 
+  apply le_plus_l. 
+  ----intros m. rewrite -> app_assoc. rewrite -> app_assoc.
+     rewrite <- (app_assoc T x (napp m x0) x1). apply MApp. apply H4. apply Hmatch2.
+  (* 同理 MAdd-2 pumping_constant re2 <= length s2 *)
+  --assert(H : (pumping_constant re1 <=? length s1) = true \/ (length s1 <=? pumping_constant re1) = true).
+  {   
+    destruct (pumping_constant re1 <=? length s1) eqn:E.
+    *left. reflexivity.
+    *right. apply le_false_rev in E. rewrite -> leb_iff. apply E.
+  }
+  destruct H as [H3 | H4].
+  (* 和MAdd-1完全一致 pumping_constant re1 <= length s1 *)
+  *apply leb_iff in H3. apply IH1 in H3.  destruct H3 as (x & x0 & x1 & H). destruct H as (H3 & H4 & H5).
+  exists x, x0, (x1 ++ s2). split.
+  ---rewrite -> app_assoc. rewrite -> app_assoc. rewrite <- (app_assoc T x x0 x1).
+     rewrite <- H3. reflexivity.
+  ---split. apply H4. destruct H5 as [H5 H6]. split.
+  ----apply le_trans with (o := pumping_constant re1 + pumping_constant re2) in H5. apply H5. 
+  apply le_plus_l. 
+  ----intros m. rewrite -> app_assoc. rewrite -> app_assoc.
+     rewrite <- (app_assoc T x (napp m x0) x1). apply MApp. apply H6. apply Hmatch2.
+  (* length s1 <= pumping_constant re1 && pumping_constant re2 <= length s2 *)  
+  *apply leb_iff in H4. apply IH2 in H2. destruct H2 as (x & x0 & x1 & H). destruct H as [H1 [H2 H3]].
+  exists (s1 ++ x), x0, x1. split.
+  ---rewrite <- app_assoc. rewrite <- H1. reflexivity.
+  ---split. apply H2. destruct H3 as [H3 H5]. split.
+  ----rewrite -> app_length. rewrite <- plus_assoc. apply le_plus_both.
+  ++apply H4.
+  ++apply H3.
+  ----intros m. rewrite <- app_assoc. apply MApp. apply Hmatch1. apply H5.
+  (* MUninoL *)
+  -simpl. intros H. apply plus_le in H. destruct H as [H1 H2]. apply IH in H1.
+  destruct H1. destruct H. destruct H. destruct H as [H3 [H4 H5]]. 
+  exists x. exists x0. exists x1. split. apply H3. split. apply H4. split. destruct H5 as [H6 H7].
+  --apply le_trans with (o := pumping_constant re1 + pumping_constant re2) in H6. apply H6. apply le_plus_l. 
+  --intros m. apply MUnionL. apply H5.
+  (* MUninoR 同理 *)
+  -simpl. intros H. apply plus_le in H. destruct H as [H1 H2]. apply IH in H2.
+  destruct H2 as (x & x0 & x1 & H). destruct H as (H3 & H4 & H5 & H6). 
+  exists x, x0, x1. split. apply H3. split. apply H4. split. 
+  --apply le_trans with (o := pumping_constant re1 + pumping_constant re2) in H5. apply H5. 
+    rewrite -> plus_comm. apply le_plus_l. 
+  --intros m. apply MUnionR. apply H6.
+  (* MStar0 *)
+  -simpl. intros H. inversion H. apply pumping_constant_0_false in H1. destruct H1.
+  (* MStarApp *)
+  -simpl. destruct s1.
+  --simpl. apply IH2.
+  --intros H. remember (x::s1) as s. simpl in H.
+  assert(Hd : (pumping_constant re <=? length s) = true \/ (length s <=? pumping_constant re) = true).
+  {   
+    destruct (pumping_constant re <=? length s) eqn:E.
+    *left. reflexivity.
+    *right. apply le_false_rev in E. rewrite -> leb_iff. apply E.
+  }
+  destruct Hd as [Ha | Hb].
+  +apply leb_iff in Ha. apply IH1 in Ha. destruct Ha as (x0 & x1 & x2 & Ha & Hb & Hc & Hd).
+  exists x0, x1, (x2 ++ s2). split. rewrite -> app_assoc. rewrite -> app_assoc. 
+  rewrite <- (app_assoc T x0 x1 x2). rewrite <- Ha. reflexivity. split. apply Hb.
+  split. apply Hc. intros m. rewrite -> app_assoc. rewrite -> app_assoc. 
+  rewrite <- (app_assoc T x0 (napp m x1) x2). apply MStarApp. apply Hd. apply Hmatch2.
+  + apply leb_iff in Hb. exists nil, s, s2. simpl. split. reflexivity. split.
+  ++ unfold not. intros Hfalse. rewrite -> Heqs in Hfalse. discriminate.
+  ++ split. apply Hb. intros m. apply napp_star. apply Hmatch1. apply Hmatch2.
+Qed.
+
 
 End Pumping.
 (** [] *)
