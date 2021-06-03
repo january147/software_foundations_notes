@@ -2465,7 +2465,7 @@ Definition manual_grade_for_check_repeats : option (nat*string) := None.
     manage to do this, you will not need the [excluded_middle]
     hypothesis. *)
 
-(* 该引理表明了将l中的某个元素移动到任何位置都不影响In属性的成立 *)
+(* 该引理表明了将list中的某个元素移动到任何位置都不影响In属性的成立 *)
 Lemma in_reorder : forall (X : Type) (x0 x : X) (l1 l2 : list X),
   In x0 (l1 ++ x :: l2) -> x = x0 \/ In x0 (l1 ++ l2).
 Proof.
@@ -2488,28 +2488,51 @@ Theorem pigeonhole_principle: forall (X:Type) (l1  l2:list X),
 Proof.
    intros X l1. induction l1 as [|x l1' IHl1'].
    - intros l2 H H1 H2. simpl in H2. inversion H2.
-   - intros l2 H H1 H2. apply repeats_s. unfold lt in H2.
-   simpl in H2. apply Sn_le_Sm__n_le_m in H2. inversion H2.
+   - intros l2 H H1 H2. apply repeats_s. 
+     (* l1'和l2的长度关系是我们能否使用归纳假设的关键，因此对其进行讨论(inversion H2) *)
+     unfold lt in H2.
+     simpl in H2. apply Sn_le_Sm__n_le_m in H2. inversion H2.
+   (* 首先考虑length l2 = length l1'的情况，这种情况是最难证明的，我们无法直接使用
+      归纳假设。我们首先对目标中的In x l1'使用排中律进行分类讨论 *)
    -- assert ((In x l1') \/ ~(In x l1')). { apply H. }
       destruct H0 as [H0 | H0].
       * left. apply H0.
+      (* In x l1'不成立的情况下，我们必须证明repeats l1'. 这里我们有
+         length l2 = length l1', 如果我们从l2中去掉x得到l2',则可以
+         得到length l2' < length l1', 另外根据In x0 l1' -> In x0 l2
+         并且x不在l1'中，我们就可以推出 In x0 l1' -> In x0 l2'
+         (注意l2‘是从l2中去掉了一个x，这样我们就能使用归纳假设得到repeat l1'，完成证明) *)
+      (* 首先根据已有结论退出In x l2 *)
       * right. unfold not in H0. assert ( x=x \/ In x l1' ).
-        {  left. reflexivity. } apply H1 in H4. apply in_split in H4.
-        destruct H4 as (x1 & x2 & H4). remember (x1 ++ x2) as l2'.
+        {  left. reflexivity. } apply H1 in H4. 
+        (* 接着使用in_split引理将l2分为l2a ++ x :: l2b三部分  *)
+        apply in_split in H4.
+        destruct H4 as (l2a & l2b & H4). 
+        (* 去l2a ++ l2b作为l2’ *)
+        remember (l2a ++ l2b) as l2'.
+        (* 证明length l2' < length l1' *)
         rewrite -> H4 in H2. rewrite -> app_length in H2. simpl in H2.
         rewrite <- plus_comm in H2. simpl in H2. rewrite -> plus_comm in H2.
         rewrite <- app_length in H2. rewrite <- Heql2' in H2. 
+        (* 使用归纳假设转换目标，证明3个假设前提 *)
         apply IHl1' with (l2 := l2').
+      (* 排中律*)
       ** apply H.
-      ** intros x0. intros H5. assert ( x0 = x \/ x0 <> x). { apply H. }
-         destruct H6 as [H6 | H6].
-         + rewrite -> H6 in H5. apply H0 in H5. destruct H5.
-         + unfold not in H6. simpl in H1. assert (x = x0 \/ In x0 l1').
-           { right. apply H5. } apply H1 in H7. rewrite -> H4 in H7. 
-           apply in_reorder in H7. destruct H7 as [H7 | H7].
-         ++ symmetry in H7. apply H6 in H7. destruct H7.
-         ++ rewrite <- Heql2' in H7. apply H7.
+      (* In x l1' -> In x l2' *)
+         (* 首先推导出In x l2 *)
+      ** intros x0. intros H5. simpl in H1. assert (x = x0 \/ In x0 l1').
+         { right. apply H5. } apply H1 in H6. 
+         (* 将l2展开 *)
+         rewrite -> H4 in H6. 
+         (* 使用in_reorder引理将l2中的x分离出去 *)
+         apply in_reorder in H6. destruct H6 as [H6 | H6].
+         (* x0 = x时有In x l1',与假设冲突 *)
+         ++ rewrite <- H6 in H5. apply H0 in H5. destruct H5.
+         (* In x0 l2'即为我们所证明的目标 *)
+         ++ rewrite <- Heql2' in H6. apply H6.
+      (* length l2' < length l1' (上边已经证明) *)
       ** apply H2.
+    (* length l2 < length l1, 直接使用归纳假设即可完成证明 *)
     -- apply n_le_m__Sn_le_Sm in H3. rewrite -> H0 in H3. right. apply IHl1' with (l2 := l2).
        * apply H.
        * intros x0 H4. assert (In x0 (x :: l1')). { simpl. right.  apply H4. }
