@@ -2433,14 +2433,21 @@ Lemma in_split : forall (X:Type) (x:X) (l:list X),
   In x l ->
   exists l1 l2, l = l1 ++ x :: l2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X x l H.
+  induction l.
+  - simpl in H. destruct H.
+  - simpl in H. destruct H as [H | H].
+  -- rewrite -> H. exists nil, l. simpl. reflexivity.
+  -- apply IHl in H. destruct H as (l1 & l2 & H). exists (x0::l1), l2.
+     simpl. f_equal. apply H.
+Qed.
 
 (** Now define a property [repeats] such that [repeats X l] asserts
     that [l] contains at least one repeated element (of type [X]).  *)
 
-Inductive repeats {X:Type} : list X -> Prop :=
-  (* FILL IN HERE *)
-.
+Inductive repeats {X:Type} : list X -> Prop :=  
+  | repeats_s (n : X) (l : list X) (H : In n l \/ repeats l) : repeats (n :: l).
+
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_check_repeats : option (nat*string) := None.
@@ -2458,6 +2465,21 @@ Definition manual_grade_for_check_repeats : option (nat*string) := None.
     manage to do this, you will not need the [excluded_middle]
     hypothesis. *)
 
+(* 该引理表明了将l中的某个元素移动到任何位置都不影响In属性的成立 *)
+Lemma in_reorder : forall (X : Type) (x0 x : X) (l1 l2 : list X),
+  In x0 (l1 ++ x :: l2) -> x = x0 \/ In x0 (l1 ++ l2).
+Proof.
+  intros X x0 x l1 l2.
+  induction l1.
+  - simpl. intros H. apply H.
+  - simpl. intros H.
+  -- destruct H as [H | H].
+  --- right. left. apply H.
+  --- apply IHl1 in H. destruct H as [H | H].
+      * left. apply H.
+      * right. right. apply H.
+Qed.
+
 Theorem pigeonhole_principle: forall (X:Type) (l1  l2:list X),
    excluded_middle ->
    (forall x, In x l1 -> In x l2) ->
@@ -2465,7 +2487,38 @@ Theorem pigeonhole_principle: forall (X:Type) (l1  l2:list X),
    repeats l1.
 Proof.
    intros X l1. induction l1 as [|x l1' IHl1'].
-  (* FILL IN HERE *) Admitted.
+   - intros l2 H H1 H2. simpl in H2. inversion H2.
+   - intros l2 H H1 H2. apply repeats_s. unfold lt in H2.
+   simpl in H2. apply Sn_le_Sm__n_le_m in H2. inversion H2.
+   -- assert ((In x l1') \/ ~(In x l1')). { apply H. }
+      destruct H0 as [H0 | H0].
+      * left. apply H0.
+      * right. unfold not in H0. assert ( x=x \/ In x l1' ).
+        {  left. reflexivity. } apply H1 in H4. apply in_split in H4.
+        destruct H4 as (x1 & x2 & H4). remember (x1 ++ x2) as l2'.
+        rewrite -> H4 in H2. rewrite -> app_length in H2. simpl in H2.
+        rewrite <- plus_comm in H2. simpl in H2. rewrite -> plus_comm in H2.
+        rewrite <- app_length in H2. rewrite <- Heql2' in H2. 
+        apply IHl1' with (l2 := l2').
+      ** apply H.
+      ** intros x0. intros H5. assert ( x0 = x \/ x0 <> x). { apply H. }
+         destruct H6 as [H6 | H6].
+         + rewrite -> H6 in H5. apply H0 in H5. destruct H5.
+         + unfold not in H6. simpl in H1. assert (x = x0 \/ In x0 l1').
+           { right. apply H5. } apply H1 in H7. rewrite -> H4 in H7. 
+           apply in_reorder in H7. destruct H7 as [H7 | H7].
+         ++ symmetry in H7. apply H6 in H7. destruct H7.
+         ++ rewrite <- Heql2' in H7. apply H7.
+      ** apply H2.
+    -- apply n_le_m__Sn_le_Sm in H3. rewrite -> H0 in H3. right. apply IHl1' with (l2 := l2).
+       * apply H.
+       * intros x0 H4. assert (In x0 (x :: l1')). { simpl. right.  apply H4. }
+         apply H1 in H5. apply H5.
+       * apply H3.
+Qed.
+
+
+
 
 (** [] *)
 
