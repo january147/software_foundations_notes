@@ -1896,7 +1896,7 @@ End Pumping.
     performing this conversion as we did it there can result in
     tedious proof scripts.  Consider the proof of the following
     theorem: *)
-
+Locate "=?".
 Theorem filter_not_empty_In : forall n l,
   filter (fun x => n =? x) l <> [] ->
   In n l.
@@ -1958,9 +1958,16 @@ Qed.
 (** **** Exercise: 2 stars, standard, especially useful (reflect_iff)  *)
 Theorem reflect_iff : forall P b, reflect P b -> (P <-> b = true).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
+  intros P b H.
+  destruct b.
+  - inversion H. split. 
+  -- reflexivity.
+  -- intros H1. apply H0.
+  - inversion H. unfold not in H0. split.
+  -- intros H1. apply H0 in H1. destruct H1.
+  -- discriminate.
+Qed.
+ 
 (** The advantage of [reflect] over the normal "if and only if"
     connective is that, by destructing a hypothesis or lemma of the
     form [reflect P b], we can perform case analysis on [b] while at
@@ -2009,8 +2016,18 @@ Fixpoint count n l :=
 Theorem eqbP_practice : forall n l,
   count n l = 0 -> ~(In n l).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros n l.
+  induction l.
+  - simpl. intros H. unfold not. intros H0. destruct H0.
+  - simpl. destruct (eqbP n x).
+  -- simpl. discriminate.
+  -- simpl. intros H0. unfold not. intros H1. apply IHl in H0.
+     unfold not in H0. unfold not in H. destruct H1 as [H1 | H1].
+     * symmetry in H1. apply H in H1. destruct H1.
+     * apply H0 in H1. destruct H1.
+Qed.
+
+(* 所以说reflect具体是指什么意思呢？ *)
 
 (** This small example shows how reflection gives us a small gain in
     convenience; in larger developments, using [reflect] consistently
@@ -2042,8 +2059,10 @@ Proof.
     [nostutter]. *)
 
 Inductive nostutter {X:Type} : list X -> Prop :=
- (* FILL IN HERE *)
-.
+  | nostutter_nil : nostutter nil
+  | nostutter_x_nil (x : X) : nostutter [x]
+  | nostutter_x_y_l (x : X) (y : X) (l : list X) (H : x <> y ) (H : nostutter (y :: l)) : nostutter (x :: y :: l).
+
 (** Make sure each of these tests succeeds, but feel free to change
     the suggested proof (in comments) if the given one doesn't work
     for you.  Your definition might be different from ours and still
@@ -2055,34 +2074,26 @@ Inductive nostutter {X:Type} : list X -> Prop :=
     example with more basic tactics.)  *)
 
 Example test_nostutter_1: nostutter [3;1;4;1;5;6].
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. repeat constructor; apply eqb_neq; auto.
   Qed.
-*)
+
 
 Example test_nostutter_2:  nostutter (@nil nat).
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. repeat constructor; apply eqb_neq; auto.
   Qed.
-*)
+
 
 Example test_nostutter_3:  nostutter [5].
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. repeat constructor; auto. Qed.
-*)
+
 
 Example test_nostutter_4:      not (nostutter [3;1;1;4]).
-(* FILL IN HERE *) Admitted.
-(* 
   Proof. intro.
   repeat match goal with
     h: nostutter _ |- _ => inversion h; clear h; subst
   end.
   contradiction; auto. Qed.
-*)
+
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_nostutter : option (nat*string) := None.
@@ -2119,7 +2130,53 @@ Definition manual_grade_for_nostutter : option (nat*string) := None.
     to be a merge of two others.  Do this with an inductive relation,
     not a [Fixpoint].)  *)
 
-(* FILL IN HERE *)
+Inductive merge_of {X : Type}: list X -> list X -> list X -> Prop :=
+| merge_of_nil : merge_of nil nil nil
+| merge_of_left (x : X) (l l1 l2 : list X) (H : merge_of l l1 l2) : merge_of (x :: l) (x :: l1) l2
+| merge_of_right (x : X) (l l1 l2 : list X) (H : merge_of l l1 l2) : merge_of (x :: l) l1 (x :: l2).
+
+Example test_merge_of1: @merge_of nat nil nil nil.
+  Proof. repeat constructor; apply eqb_neq; auto.
+  Qed.
+
+Example test_merge_of2: merge_of [1;2;3] nil [1;2;3].
+  Proof. repeat constructor; apply eqb_neq; auto.
+  Qed.
+
+Example test_merge_of3: merge_of [1;2;3] [1;2;3] nil.
+  Proof. repeat constructor; apply eqb_neq; auto.
+  Qed.
+
+Example test_merge_of4: merge_of [1;4;2;5;3;6] [1;5] [4;2;3;6].
+  Proof. repeat constructor; apply eqb_neq; auto.
+  Qed.
+
+Example test_merge_of5: not (merge_of [1;4;2;5;3;6] [1;5] [4;3;2;6]).
+  Proof. intro.
+  inversion H.
+  inversion H4.
+  inversion H8.
+  Qed.
+
+Theorem merge_filter : forall (X : Type) (l l1 l2 : list X) (f : X -> bool),
+merge_of l l1 l2 -> (forall x, In x l1 -> f x = true) -> (forall x, In x l2 -> f x = false) -> filter f l = l1.
+
+Proof.
+  intros X l l1 l2 f.
+  intros H1 H2 H3.
+  induction H1 as [| h l' l1' l2 | h l' l1 l2'].
+  - simpl. reflexivity.
+  - assert (H : f h = true). 
+    { apply H2. simpl. left. reflexivity. }
+    simpl. rewrite -> H. f_equal. apply IHmerge_of. 
+    * intros x H4. apply H2. simpl. right. apply H4.
+    * apply H3.
+  - assert (H : f h = false).
+    { apply H3. simpl. left. reflexivity. }
+    simpl.  rewrite -> H. apply IHmerge_of.
+    * apply H2.
+    * intros x H4. apply H3. simpl. right. apply H4.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_filter_challenge : option (nat*string) := None.
@@ -2132,9 +2189,30 @@ Definition manual_grade_for_filter_challenge : option (nat*string) := None.
     evaluates to [true] on all their members, [filter test l] is the
     longest.  Formalize this claim and prove it. *)
 
-(* FILL IN HERE
+(* 上边已经定义了关于nat的subseq，这里定义关于任何类型的subseq *)
+Inductive subseq_general {X : Type} : list X -> list X -> Prop :=
+|nil_true' (b : list X) : subseq_general nil b
+|add_both' (n : X) (a b : list X) (H : subseq_general a b) : subseq_general (n :: a) (n :: b)
+|add_single' (n : X) (a b : list X) (H : subseq_general a b) : subseq_general a (n :: b).
 
-    [] *)
+Theorem merge_filter_2 : forall (X : Type) (l l1 : list X) (f : X -> bool), 
+  subseq_general l1 l -> (forall x : X, In x l1 -> f x = true) -> length l1 <= length (filter f l).
+Proof.
+  intros X l l1 f H.
+  induction H.
+  - simpl. intros H. destruct (length (filter f b)).
+  -- apply le_n.
+  -- apply O_le_n.
+  - intros H1. assert (f n = true).
+    { apply H1. simpl. left. reflexivity.  }
+    simpl. rewrite -> H0. simpl. apply n_le_m__Sn_le_Sm.
+    apply IHsubseq_general. intros x H2. apply H1. simpl.
+    right. apply H2.
+  - intros H1. simpl. destruct (f n).
+  -- simpl. apply le_S. apply IHsubseq_general. apply H1.
+  -- apply IHsubseq_general. apply H1.
+Qed.
+  
 
 (** **** Exercise: 4 stars, standard, optional (palindromes) 
 
@@ -2159,7 +2237,28 @@ Definition manual_grade_for_filter_challenge : option (nat*string) := None.
        forall l, pal l -> l = rev l.
 *)
 
-(* FILL IN HERE *)
+Inductive pal {X : Type} : list X -> Prop :=
+  | pal_nil : pal nil
+  | pal_single (x : X) : pal [x]
+  | pal_grow (x : X) (l : list X) (H : pal l): pal (x :: l ++ [x]).
+
+Theorem pal_app_rev : forall (X : Type) (l : list X), pal (l ++ rev l).
+Proof.
+  intros X l.
+  induction l.
+  - simpl. apply pal_nil.
+  - simpl. rewrite -> app_assoc. apply pal_grow. apply IHl.
+Qed.
+
+Theorem pal_rev : forall (X : Type) (l : list X), pal l -> l = rev l.
+Proof.
+  intros X l H.
+  induction H.
+  - simpl. reflexivity.
+  - simpl. reflexivity.
+  - simpl. rewrite -> rev_app_distr. simpl. f_equal.
+    f_equal. apply IHpal.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_pal_pal_app_rev_pal_rev : option (nat*string) := None.
@@ -2174,9 +2273,114 @@ Definition manual_grade_for_pal_pal_app_rev_pal_rev : option (nat*string) := Non
      forall l, l = rev l -> pal l.
 *)
 
-(* FILL IN HERE
+(* 证明rev_pal需要的十分重要的一个引理 *)
+Lemma rev_unit : forall (X : Type) (x : X) (l : list X),  rev (l ++ [x]) = x :: rev l.
+Proof.
+  intros X x l.
+  destruct l as [|h t].
+  - simpl. reflexivity.
+  - rewrite -> rev_app_distr. simpl. reflexivity.
+Qed. 
 
-    [] *)
+(* 没有使用 *)
+Lemma app_same_equal_l : forall (X : Type) (l l1 l2 : list X),
+  l ++ l1 = l ++ l2 -> l1 = l2.
+Proof.
+  intros X l.
+  induction l.
+  - intros l1 l2. simpl. intros H. apply H.
+  - simpl. intros l1 l2 H. injection H. apply IHl.
+Qed.
+
+(* 证明app_same_equal_r过程使用了该引理 *)
+Lemma rev_equal : forall (X : Type) (l1 l2 : list X),
+  rev l1 = rev l2 -> l1 = l2.
+Proof.
+  intros x l1.
+  destruct l1.
+  -simpl. destruct l2.
+  -- reflexivity.
+  -- simpl. intros H. destruct (rev l2).
+  --- discriminate.
+  --- discriminate.
+  - intros l2 H. simpl in H. assert (H1 : rev (rev l1 ++ [x0]) = rev (rev l2)).
+    { rewrite -> H. reflexivity. }
+    rewrite -> rev_unit in H1. rewrite -> rev_involutive in H1. rewrite -> rev_involutive in H1.
+    apply H1.
+Qed.
+
+(* 证明rev_pal过程使用了该引理 *)
+Lemma rev_length_equal : forall (X : Type) (l : list X), length l = length (rev l).
+Proof.
+  intros X l.
+  induction l.
+  - simpl. reflexivity.
+  - simpl. rewrite -> app_length. simpl. rewrite -> plus_comm. simpl.
+  f_equal. apply IHl.
+Qed.
+
+(* 没有使用 *)
+Lemma app_same_equal_r : forall (X : Type) (l l1 l2 : list X),
+  l1 ++ l = l2 ++ l -> l1 = l2.
+Proof.
+  intros X l l1 l2 H.
+  assert (H1 : rev (l1 ++ l) = rev (l2 ++ l)).
+  { rewrite -> H. reflexivity. }
+  rewrite -> rev_app_distr in H1. rewrite -> rev_app_distr in H1.
+  apply app_same_equal_l in H1. apply rev_equal in H1. apply H1.
+Qed.
+  
+Lemma rev_eq_pal_length: forall (X: Type) (n: nat) (l: list X), length l <= n -> l = rev l -> pal l.
+Proof.
+ intros X n.
+ induction n.
+ - intros l H H1. destruct l.
+ -- apply pal_nil.
+ -- simpl in H. inversion H.
+ - intros l H H1. destruct (eqbP (length l) (S n)).
+ -- destruct l as [|h t] eqn:E.
+    * simpl in H0. discriminate.
+    * destruct t as [| x t'] eqn : E3.
+    ** apply pal_single.
+    ** simpl in H1. destruct (rev t') eqn:E1.
+    *** simpl in H1. injection H1 as H1 H2 H3.  replace (h :: x :: t') with ( h :: nil ++ [h]).
+    **** apply pal_grow. apply pal_nil.
+    **** simpl. rewrite -> H1. rewrite -> H3. reflexivity.
+    *** simpl in H1. injection H1 as H1 H2. rewrite -> H2. apply pal_grow. 
+        assert (H3 : l0 ++ [x] = rev (l0 ++ [x])). 
+        { rewrite <- (rev_involutive _ t') in H2. rewrite -> E1 in H2.
+          simpl in H2. rewrite -> H1 in H2. 
+          assert (H4 : rev (x :: rev l0 ++ [x0]) = rev ((l0 ++ [x]) ++ [x0])).
+          { rewrite -> H2. reflexivity. }
+          rewrite -> rev_unit in H4.  simpl in H4. rewrite -> (rev_unit _ x0 (rev l0) ) in H4.
+          simpl in H4. injection H4 as H4. rewrite -> rev_involutive in H4. apply H4.
+        }
+        apply IHn. 
+        + simpl in H. apply Sn_le_Sm__n_le_m in H. apply le_S in H. apply Sn_le_Sm__n_le_m in H.
+        assert (length (l0 ++ [x]) = length (t')).
+        { rewrite <- (rev_involutive _ t'). rewrite -> E1. simpl. 
+          rewrite -> app_length. rewrite -> app_length. simpl. rewrite -> plus_comm.
+          rewrite -> (plus_comm (length (rev l0)) 1). simpl. f_equal. apply rev_length_equal. }
+        rewrite -> H4. apply H.
+        +  apply H3.
+ -- unfold not in H0. inversion H.
+    * apply H0 in H3. destruct H3.
+    * apply IHn in H3.
+    ** apply H3.
+    ** apply H1.
+Qed. 
+
+
+Theorem rev_pal : forall (X : Type) (l : list X), l = rev l -> pal l.
+Proof.
+  intros X l H. 
+  assert (H1 : length l <= length l). 
+  { apply le_n. }
+  apply rev_eq_pal_length with (n := length l).
+  - apply H1.
+  - apply H.
+Qed.
+  
 
 (** **** Exercise: 4 stars, advanced, optional (NoDup) 
 
